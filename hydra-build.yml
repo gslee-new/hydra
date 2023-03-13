@@ -1,0 +1,39 @@
+version: "3.8"
+services:
+  hydra-only:
+    image: oryd/hydra:v2.0.3
+    ports:
+      - "4444:4444" # Public port
+      - "4445:4445" # Admin port
+      - "5555:5555" # Port for hydra token user
+    command: serve -c /etc/config/hydra/hydra.yml all --dev
+    volumes:
+      - type: bind
+        source: ./contrib/quickstart/5-min
+        target: /etc/config/hydra
+    environment:
+      - DSN=mysql://root:secret@tcp(localhost:3306)/mysql?max_conns=20&max_idle_conns=4
+     # - STRATEGIES_ACCESS_TOKEN=jwt
+      - OIDC_SUBJECT_IDENTIFIERS_SUPPORTED_TYPES=public
+      - URLS_LOGIN=http://localhost:8080/login
+      - URLS_CONSENT=http://localhost:8080/consent
+      - URLS_LOGOUT=http://localhost:8080/logout
+    restart: unless-stopped
+    depends_on:
+      - hydra-migrate
+    networks:
+      - hydra-net
+  hydra-migrate:
+    image: oryd/hydra:v2.0.3
+    environment:
+      - DSN=mysql://root:secret@tcp(localhost:3306)/mysql?max_conns=20&max_idle_conns=4
+    restart: unless-stopped
+    command: migrate -c /etc/config/hydra/hydra.yml sql -e --yes
+    volumes:
+      - type: bind
+        source: ./contrib/quickstart/5-min
+        target: /etc/config/hydra    
+    networks:
+      - hydra-net
+networks:
+  hydra-net:
